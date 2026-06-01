@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 서버 주소 등 환경별 설정 (api_config.example.dart 만 추적)
+lib/core/network/api_config.dart
