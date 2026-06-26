@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bookshelf_mobile/core/constants/app_colors.dart';
 import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
 import 'package:bookshelf_mobile/core/router/app_router.dart';
@@ -8,6 +10,7 @@ import 'package:bookshelf_mobile/features/my_page/presentation/providers/my_page
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 class MyPage extends ConsumerStatefulWidget {
   const MyPage({super.key});
@@ -55,6 +58,8 @@ class _MyPageState extends ConsumerState<MyPage> {
                       name: state.data?.nickname ?? '',
                       rentalTitle: state.data?.mostLittleLeftRentalTitle,
                       rentalDaysLeft: state.data?.mostLittleLeftRentalDate,
+                      isUploadingImage: state.isUploadingImage,
+                      onTapProfileImage: () => _pickAndUploadImage(context, ref),
                     ),
                     const Divider(height: 1, color: AppColors.borderLight),
                     _StatsRow(
@@ -68,6 +73,11 @@ class _MyPageState extends ConsumerState<MyPage> {
                       icon: Icons.receipt_long_outlined,
                       label: '대여 내역',
                       onTap: () => context.push(AppRoutes.rentalHistory),
+                    ),
+                    _MenuTile(
+                      icon: Icons.favorite_border,
+                      label: '좋아요한 책',
+                      onTap: () => context.push(AppRoutes.likedBooks),
                     ),
                     const SizedBox(height: 8),
                     const Divider(height: 1, color: AppColors.borderLight),
@@ -91,6 +101,29 @@ class _MyPageState extends ConsumerState<MyPage> {
   }
 }
 
+Future<void> _pickAndUploadImage(BuildContext context, WidgetRef ref) async {
+  final picker = ImagePicker();
+  final picked = await picker.pickImage(
+    source: ImageSource.gallery,
+    imageQuality: 85,
+  );
+  if (picked == null) return;
+
+  final file = File(picked.path);
+  await ref.read(myPageProvider.notifier).uploadProfileImage(file);
+
+  if (!context.mounted) return;
+  final error = ref.read(myPageProvider).errorMessage;
+  if (error != null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('프로필 이미지 변경에 실패했습니다.'),
+        backgroundColor: AppColors.errorNormal,
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────
 // 프로필 섹션
 // ─────────────────────────────────────────
@@ -99,10 +132,14 @@ class _ProfileSection extends StatelessWidget {
   final String name;
   final String? rentalTitle;
   final int? rentalDaysLeft;
+  final bool isUploadingImage;
+  final VoidCallback onTapProfileImage;
 
   const _ProfileSection({
     required this.profileImage,
     required this.name,
+    required this.isUploadingImage,
+    required this.onTapProfileImage,
     this.rentalTitle,
     this.rentalDaysLeft,
   });
@@ -113,15 +150,35 @@ class _ProfileSection extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: AppColors.grey200,
-            backgroundImage: profileImage.isNotEmpty
-                ? NetworkImage(profileImage)
-                : null,
-            child: profileImage.isEmpty
-                ? Icon(Icons.person, size: 48, color: Colors.grey.shade400)
-                : null,
+          GestureDetector(
+            onTap: isUploadingImage ? null : onTapProfileImage,
+            child: Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: AppColors.grey200,
+                  backgroundImage: profileImage.isNotEmpty
+                      ? NetworkImage(profileImage)
+                      : null,
+                  child: isUploadingImage
+                      ? const CircularProgressIndicator(strokeWidth: 2)
+                      : profileImage.isEmpty
+                          ? Icon(Icons.person,
+                              size: 48, color: Colors.grey.shade400)
+                          : null,
+                ),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.grey600,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt,
+                      size: 14, color: Colors.white),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           Text(

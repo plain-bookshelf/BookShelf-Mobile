@@ -1,17 +1,15 @@
-import 'package:bookshelf_mobile/features/book/domain/entities/book.dart';
+import 'package:bookshelf_mobile/features/search/domain/entities/search_book.dart';
 
-/// 검색 결과 도메인 엔티티
 class SearchResult {
-  final List<Book> books;
-  final List<String> libraries;
+  final List<SearchBook> books;
+  final bool isLastPage;
 
   const SearchResult({
     this.books = const [],
-    this.libraries = const [],
+    this.isLastPage = true,
   });
 
   bool get hasBooks => books.isNotEmpty;
-  bool get hasLibraries => libraries.isNotEmpty;
 
   static const empty = SearchResult();
 }

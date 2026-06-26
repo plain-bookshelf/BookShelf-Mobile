@@ -1,5 +1,6 @@
 import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
 import 'package:bookshelf_mobile/features/book/data/datasources/book_remote_data_source.dart';
+import 'package:dio/dio.dart';
 import 'package:bookshelf_mobile/features/book/data/models/book_detail_model.dart';
 import 'package:bookshelf_mobile/features/book/domain/entities/book.dart';
 import 'package:bookshelf_mobile/features/book/domain/entities/review.dart';
@@ -62,37 +63,6 @@ class BookDetailState {
 }
 
 // ── 더미 데이터 ──────────────────────────────────────────────────────────────
-const _dummyReviews = [
-  Review(
-    id: '1',
-    reviewerName: '이*현 님',
-    content: '저자가 재미있고 책이 좋아요',
-    likeCount: 25,
-    isLiked: true,
-  ),
-  Review(
-    id: '2',
-    reviewerName: '이*현 님',
-    content: '저자가 재미있고 책이 좋아요',
-    likeCount: 0,
-    isLiked: false,
-  ),
-  Review(
-    id: '3',
-    reviewerName: '이*현 님',
-    content: '저자가 재미있고 책이 좋아요',
-    likeCount: 0,
-    isLiked: false,
-  ),
-  Review(
-    id: '4',
-    reviewerName: '이*현 님',
-    content: '저자가 재미있고 책이 좋아요',
-    likeCount: 0,
-    isLiked: false,
-  ),
-];
-
 const _dummyRecommendations = [
   Book(
     id: '10',
@@ -174,12 +144,25 @@ class BookDetailNotifier extends Notifier<BookDetailState> {
         coverUrl: info.bookImage.isNotEmpty ? info.bookImage : null,
       );
 
+      // 댓글 로드 (실패해도 상세 화면은 표시)
+      List<Review> reviews = const [];
+      try {
+        final commentPage = await ref
+            .read(bookRemoteDataSourceProvider)
+            .getBookComments(bookId: id, accessToken: accessToken);
+        reviews = commentPage.content.map((c) => c.toReview()).toList();
+      } catch (_) {
+        reviews = const [];
+      }
+
+      if (!_mounted) return;
+
       state = BookDetailState(
         status: BookDetailStatus.loaded,
         book: book,
         detail: detail,
         isWishlisted: detail.isLiked,
-        reviews: _dummyReviews, // TODO: 댓글 API 연동 시 교체
+        reviews: reviews,
         recommendations: _dummyRecommendations, // TODO: 추천 API 연동 시 교체
       );
     } catch (e) {
@@ -189,8 +172,25 @@ class BookDetailNotifier extends Notifier<BookDetailState> {
   }
 
   // ── 위시리스트 토글 ────────────────────────────────────────────────────────
-  void toggleWishlist() =>
-      state = state.copyWith(isWishlisted: !state.isWishlisted);
+  Future<void> toggleWishlist() async {
+    final previous = state.isWishlisted;
+    final willLike = !previous;
+    // 낙관적 업데이트
+    state = state.copyWith(isWishlisted: willLike);
+
+    try {
+      final accessToken = ref.read(authSessionProvider).accessToken ?? '';
+      await ref.read(bookRemoteDataSourceProvider).setBookLike(
+            bookId: bookId,
+            accessToken: accessToken,
+            liked: willLike,
+          );
+    } catch (_) {
+      // 실패 시 이전 상태로 롤백
+      if (!_mounted) return;
+      state = state.copyWith(isWishlisted: previous);
+    }
+  }
 
   // ── 줄거리 전체보기 토글 ──────────────────────────────────────────────────
   void toggleDescription() => state = state.copyWith(
@@ -198,48 +198,135 @@ class BookDetailNotifier extends Notifier<BookDetailState> {
       );
 
   // ── 리뷰 좋아요 토글 ──────────────────────────────────────────────────────
-  void toggleReviewLike(String reviewId) {
-    final updated = state.reviews.map((r) {
+  Future<void> toggleReviewLike(String reviewId) async {
+    final previous = state.reviews;
+    final index = previous.indexWhere((r) => r.id == reviewId);
+    if (index == -1) return;
+    final willLike = !previous[index].isLiked;
+
+    // 낙관적 업데이트
+    final updated = previous.map((r) {
       if (r.id != reviewId) return r;
       return r.copyWith(
-        isLiked: !r.isLiked,
-        likeCount: r.isLiked ? r.likeCount - 1 : r.likeCount + 1,
+        isLiked: willLike,
+        likeCount: willLike ? r.likeCount + 1 : r.likeCount - 1,
       );
     }).toList();
     state = state.copyWith(reviews: updated);
+
+    try {
+      final accessToken = ref.read(authSessionProvider).accessToken ?? '';
+      await ref.read(bookRemoteDataSourceProvider).setCommentLike(
+            commentId: reviewId,
+            accessToken: accessToken,
+            liked: willLike,
+          );
+    } catch (_) {
+      // 실패 시 이전 상태로 롤백
+      if (!_mounted) return;
+      state = state.copyWith(reviews: previous);
+    }
   }
 
   // ── 대여 요청 ─────────────────────────────────────────────────────────────
   Future<void> requestRental() async {
-    // TODO: BookRepository.requestRental 연동
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (!_mounted) return;
-    state = state.copyWith(
-      toastMessage: '대여 요청이 성공적으로 완료되었어요!',
-    );
+    try {
+      final accessToken = ref.read(authSessionProvider).accessToken ?? '';
+      await ref
+          .read(bookRemoteDataSourceProvider)
+          .requestRental(bookId: bookId, accessToken: accessToken);
+      if (!_mounted) return;
+      // 대여 성공 → 상세 정보 갱신(대여 가능 상태 반영) 후 토스트
+      await _loadDetail(bookId);
+      if (!_mounted) return;
+      state = state.copyWith(toastMessage: '책 대여에 성공했어요!');
+    } on DioException catch (e) {
+      if (!_mounted) return;
+      state = state.copyWith(
+        toastMessage: _serverMessage(e) ?? '대여에 실패했어요. 잠시 후 다시 시도해주세요.',
+      );
+    } catch (_) {
+      if (!_mounted) return;
+      state = state.copyWith(
+        toastMessage: '대여에 실패했어요. 잠시 후 다시 시도해주세요.',
+      );
+    }
+  }
+
+  /// 서버 에러 응답({code, message, status, path})에서 message 추출
+  String? _serverMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+    return null;
   }
 
   // ── 예약 요청 ─────────────────────────────────────────────────────────────
   Future<void> requestReservation() async {
-    // TODO: BookRepository.requestReservation 연동
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (!_mounted) return;
-    state = state.copyWith(
-      toastMessage: '예약이 성공적으로 완료되었어요!',
-    );
+    try {
+      final accessToken = ref.read(authSessionProvider).accessToken ?? '';
+      await ref
+          .read(bookRemoteDataSourceProvider)
+          .requestReservation(bookId: bookId, accessToken: accessToken);
+      if (!_mounted) return;
+      // 예약 성공 → 상세 정보 갱신 후 토스트
+      await _loadDetail(bookId);
+      if (!_mounted) return;
+      state = state.copyWith(toastMessage: '책 예약에 성공했어요!');
+    } on DioException catch (e) {
+      if (!_mounted) return;
+      state = state.copyWith(
+        toastMessage: _serverMessage(e) ?? '예약에 실패했어요. 잠시 후 다시 시도해주세요.',
+      );
+    } catch (_) {
+      if (!_mounted) return;
+      state = state.copyWith(
+        toastMessage: '예약에 실패했어요. 잠시 후 다시 시도해주세요.',
+      );
+    }
   }
 
-  // ── 리뷰 추가 ─────────────────────────────────────────────────────────────
-  void addReview(String content) {
-    if (content.trim().isEmpty) return;
-    final newReview = Review(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      reviewerName: '나',
-      content: content.trim(),
-      likeCount: 0,
-      isLiked: false,
-    );
-    state = state.copyWith(reviews: [...state.reviews, newReview]);
+  // ── 댓글 작성 ─────────────────────────────────────────────────────────────
+  Future<void> addReview(String content) async {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return;
+
+    try {
+      final accessToken = ref.read(authSessionProvider).accessToken ?? '';
+
+      // 1) 댓글 작성 API 호출
+      await ref.read(bookRemoteDataSourceProvider).writeComment(
+            bookId: bookId,
+            accessToken: accessToken,
+            comment: trimmed,
+          );
+      if (!_mounted) return;
+
+      // 2) 작성 성공 → 목록 재조회 시도 (실패해도 작성 성공 토스트는 유지)
+      try {
+        final commentPage = await ref
+            .read(bookRemoteDataSourceProvider)
+            .getBookComments(bookId: bookId, accessToken: accessToken);
+        if (!_mounted) return;
+        state = state.copyWith(
+          reviews: commentPage.content.map((c) => c.toReview()).toList(),
+        );
+      } catch (_) {
+        // 서버 오류 등으로 목록 재조회 실패 시 기존 목록 유지
+      }
+
+      if (!_mounted) return;
+      state = state.copyWith(toastMessage: '댓글이 등록되었습니다.');
+    } on DioException catch (e) {
+      if (!_mounted) return;
+      state = state.copyWith(
+        toastMessage: _serverMessage(e) ?? '댓글 등록에 실패했어요.',
+      );
+    } catch (_) {
+      if (!_mounted) return;
+      state = state.copyWith(toastMessage: '댓글 등록에 실패했어요.');
+    }
   }
 
   // ── 토스트 초기화 ──────────────────────────────────────────────────────────

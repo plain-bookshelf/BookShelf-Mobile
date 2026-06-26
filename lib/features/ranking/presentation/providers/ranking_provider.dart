@@ -1,3 +1,5 @@
+import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
+import 'package:bookshelf_mobile/features/ranking/data/repositories/ranking_repository_impl.dart';
 import 'package:bookshelf_mobile/features/ranking/domain/entities/ranking_user.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,31 +34,6 @@ class RankingState {
       );
 }
 
-// ── 더미 데이터 ───────────────────────────────────────────────────────────────
-final _dummyRankings = [
-  const RankingUser(rank: 1, userName: '복어',  bookCount: 120),
-  const RankingUser(rank: 2, userName: '개복치', bookCount: 100),
-  const RankingUser(rank: 3, userName: '기린',  bookCount: 60),
-  const RankingUser(
-    rank: 4,
-    userName: '공룡',
-    institution: '대덕소프트웨어마이스터고',
-    bookCount: 79,
-  ),
-  const RankingUser(
-    rank: 5,
-    userName: '공룡',
-    institution: '대덕소프트웨어마이스터고',
-    bookCount: 78,
-  ),
-  const RankingUser(
-    rank: 6,
-    userName: '공룡',
-    institution: '대덕소프트웨어마이스터고',
-    bookCount: 77,
-  ),
-];
-
 // ── RankingNotifier ───────────────────────────────────────────────────────────
 class RankingNotifier extends Notifier<RankingState> {
   bool _mounted = true;
@@ -69,13 +46,20 @@ class RankingNotifier extends Notifier<RankingState> {
   }
 
   Future<void> _load() async {
-    // TODO: RankingRepository.getRankings() 연동
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!_mounted) return;
-    state = state.copyWith(
-      status: RankingStatus.loaded,
-      rankings: _dummyRankings,
-    );
+    try {
+      final accessToken = ref.read(authSessionProvider).accessToken ?? '';
+      final rankings = await ref
+          .read(rankingRepositoryProvider)
+          .getRankings(accessToken: accessToken);
+      if (!_mounted) return;
+      state = state.copyWith(
+        status: RankingStatus.loaded,
+        rankings: rankings,
+      );
+    } catch (_) {
+      if (!_mounted) return;
+      state = state.copyWith(status: RankingStatus.failure);
+    }
   }
 }
 

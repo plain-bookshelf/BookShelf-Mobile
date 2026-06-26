@@ -21,6 +21,7 @@ import 'package:bookshelf_mobile/features/cart/presentation/pages/cart_page.dart
 import 'package:bookshelf_mobile/features/home/domain/entities/main_book.dart';
 import 'package:bookshelf_mobile/features/home/presentation/pages/book_list_page.dart';
 import 'package:bookshelf_mobile/features/home/presentation/pages/home_page.dart';
+import 'package:bookshelf_mobile/features/my_page/presentation/pages/liked_books_page.dart';
 import 'package:bookshelf_mobile/features/my_page/presentation/pages/my_page.dart';
 import 'package:bookshelf_mobile/features/my_page/presentation/pages/rental_history_page.dart';
 import 'package:bookshelf_mobile/features/onboarding/presentation/pages/onboarding_complete_page.dart';
@@ -78,6 +79,7 @@ abstract class AppRoutes {
   // ── My Page ──
   static const myPage             = '/my-page';
   static const rentalHistory      = '/my-page/rental-history';
+  static const likedBooks         = '/my-page/liked-books';
 
   // ── Onboarding ──
   static const onboarding         = '/onboarding';
@@ -245,6 +247,10 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.login}) => appRoute
     GoRoute(
       path: AppRoutes.rentalHistory,
       builder: (ctx, state) => const RentalHistoryPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.likedBooks,
+      builder: (ctx, state) => const LikedBooksPage(),
     ),
 
     // ──────────────── Onboarding ────────────────

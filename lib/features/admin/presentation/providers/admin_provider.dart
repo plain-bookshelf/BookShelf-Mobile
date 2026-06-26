@@ -1,3 +1,5 @@
+import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
+import 'package:bookshelf_mobile/features/admin/data/datasources/admin_remote_data_source.dart';
 import 'package:bookshelf_mobile/features/admin/domain/entities/rental_request.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -93,13 +95,25 @@ class AdminNotifier extends Notifier<AdminState> {
   }
 
   // ── 대여 승인 ─────────────────────────────────────────────────────────────
+  // PATCH /api/manager/approve/{bookDetailId}
   Future<void> approveRental(String id) async {
-    // TODO: AdminRepository.approveRental(id) 연동
+    final previous = state.rentalRequests;
+    // 낙관적 업데이트: 목록에서 즉시 제거
     state = state.copyWith(
-      rentalRequests: state.rentalRequests
-          .where((r) => r.id != id)
-          .toList(),
+      rentalRequests: previous.where((r) => r.id != id).toList(),
     );
+
+    try {
+      final accessToken = ref.read(authSessionProvider).accessToken ?? '';
+      await ref.read(adminRemoteDataSourceProvider).approveRental(
+            bookDetailId: id,
+            accessToken: accessToken,
+          );
+    } catch (_) {
+      // 실패 시 이전 목록으로 롤백
+      if (!_mounted) return;
+      state = state.copyWith(rentalRequests: previous);
+    }
   }
 
   // ── 대여 취소 ─────────────────────────────────────────────────────────────

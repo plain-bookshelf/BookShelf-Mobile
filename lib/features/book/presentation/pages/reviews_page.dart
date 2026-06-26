@@ -40,13 +40,14 @@ class _ReviewsPageState extends ConsumerState<ReviewsPage> {
     if (hasText != _canSubmit) setState(() => _canSubmit = hasText);
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_canSubmit) return;
-    ref
-        .read(bookDetailProvider(widget.bookId).notifier)
-        .addReview(_inputController.text);
+    final text = _inputController.text;
     _inputController.clear();
-    // 새 리뷰가 추가된 뒤 목록 하단으로 스크롤
+    await ref
+        .read(bookDetailProvider(widget.bookId).notifier)
+        .addReview(text);
+    // 댓글 등록 후 목록 하단으로 스크롤
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(

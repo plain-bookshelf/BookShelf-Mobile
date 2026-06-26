@@ -6,6 +6,7 @@ import 'package:bookshelf_mobile/core/widgets/app_text_field.dart';
 import 'package:bookshelf_mobile/core/widgets/social_login_button.dart';
 import 'package:bookshelf_mobile/features/auth/presentation/providers/login_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,6 +20,7 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -86,13 +88,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             AppTextField(
               hintText: '이메일 입력',
               controller: _usernameController,
+              keyboardType: TextInputType.emailAddress,
+              inputFormatters: [
+                FilteringTextInputFormatter.deny(RegExp(r'\s')),
+              ],
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 16),
             AppTextField(
               hintText: '비밀번호 입력',
               controller: _passwordController,
-              obscureText: true,
+              obscureText: _obscurePassword,
+              inputFormatters: [
+                FilteringTextInputFormatter.deny(RegExp(r'\s')),
+              ],
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: AppColors.grey500,
+                  size: 22,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+              ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 32),

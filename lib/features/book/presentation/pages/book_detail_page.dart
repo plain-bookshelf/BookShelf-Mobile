@@ -40,12 +40,11 @@ class _BookDetailPageState extends ConsumerState<BookDetailPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
-          label: '클리어하여 닫기',
+          label: '닫기',
           textColor: AppColors.grey400,
-          onPressed: () {
-            ref.read(bookDetailProvider(widget.bookId).notifier).clearToast();
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
+          // SnackBarAction 은 기본적으로 누르면 스낵바를 닫는다.
+          // 토스트 상태는 표시 직후(아래) 이미 초기화되므로 별도 작업 불필요.
+          onPressed: () {},
         ),
       ),
     );

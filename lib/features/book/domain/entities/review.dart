@@ -1,10 +1,11 @@
-/// 도서 리뷰 도메인 엔티티
+/// 도서 리뷰(댓글) 도메인 엔티티
 class Review {
   final String id;
   final String reviewerName;
   final String content;
   final int likeCount;
   final bool isLiked;
+  final String? profileImage;
 
   const Review({
     required this.id,
@@ -12,6 +13,7 @@ class Review {
     required this.content,
     required this.likeCount,
     required this.isLiked,
+    this.profileImage,
   });
 
   Review copyWith({
@@ -20,6 +22,7 @@ class Review {
     String? content,
     int? likeCount,
     bool? isLiked,
+    String? profileImage,
   }) =>
       Review(
         id: id ?? this.id,
@@ -27,5 +30,6 @@ class Review {
         content: content ?? this.content,
         likeCount: likeCount ?? this.likeCount,
         isLiked: isLiked ?? this.isLiked,
+        profileImage: profileImage ?? this.profileImage,
       );
 }

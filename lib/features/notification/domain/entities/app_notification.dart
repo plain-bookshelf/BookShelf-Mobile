@@ -5,8 +5,9 @@ class AppNotification {
   final String id;
   final String title;
   final String body;
-  final String? coverUrl; // 도서 표지 이미지 URL (있을 경우 상세에서 표시)
-  final DateTime createdAt;
+  final String? coverUrl;
+  final String? bookId;   // 도서 상세로 이동할 때 사용
+  final DateTime? createdAt;
   final bool isRead;
 
   const AppNotification({
@@ -14,7 +15,8 @@ class AppNotification {
     required this.title,
     required this.body,
     this.coverUrl,
-    required this.createdAt,
+    this.bookId,
+    this.createdAt,
     this.isRead = false,
   });
 
@@ -23,6 +25,7 @@ class AppNotification {
     String? title,
     String? body,
     String? coverUrl,
+    String? bookId,
     DateTime? createdAt,
     bool? isRead,
   }) =>
@@ -31,6 +34,7 @@ class AppNotification {
         title: title ?? this.title,
         body: body ?? this.body,
         coverUrl: coverUrl ?? this.coverUrl,
+        bookId: bookId ?? this.bookId,
         createdAt: createdAt ?? this.createdAt,
         isRead: isRead ?? this.isRead,
       );
