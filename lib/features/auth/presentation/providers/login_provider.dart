@@ -1,6 +1,6 @@
+import 'package:bookshelf_mobile/core/network/api_error.dart';
 import 'package:bookshelf_mobile/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:bookshelf_mobile/features/auth/domain/entities/user.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class LoginState {
@@ -41,24 +41,16 @@ class LoginNotifier extends Notifier<LoginState> {
           );
       state = state.copyWith(isLoading: false, user: user);
       return user;
-    } on DioException catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: _parseError(e));
-      return null;
-    } catch (_) {
+    } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: '로그인에 실패했습니다. 다시 시도해주세요.',
+        errorMessage: parseApiErrorMessage(
+          e,
+          fallback: '로그인에 실패했습니다. 다시 시도해주세요.',
+        ),
       );
       return null;
     }
-  }
-
-  String _parseError(DioException e) {
-    final data = e.response?.data;
-    if (data is Map && data['message'] != null) {
-      return data['message'] as String;
-    }
-    return '로그인에 실패했습니다. 다시 시도해주세요.';
   }
 }
 

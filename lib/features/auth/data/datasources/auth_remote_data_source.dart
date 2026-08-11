@@ -1,4 +1,5 @@
 import 'package:bookshelf_mobile/core/network/api_constants.dart';
+import 'package:bookshelf_mobile/core/network/cookie_utils.dart';
 import 'package:bookshelf_mobile/features/auth/data/models/auth_response_model.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +8,7 @@ import 'package:bookshelf_mobile/core/network/api_client.dart';
 // ── 엔드포인트 ──────────────────────────────────────────────
 const _kEmailSend = '/api/verification/email/send';
 const _kEmailVerify = '/api/verification/email/verify';
-const _kFindPassword = '/find-password';
+const _kFindPassword = '/api/verification/find-password';
 const _kLogin = '/api/auth/login';
 const _kReissue = '/api/auth/reissue';
 const _kLogout = '/api/auth/logout';
@@ -28,17 +29,6 @@ class AuthRemoteDataSource {
   final Dio _dio;
 
   const AuthRemoteDataSource(this._dio);
-
-  /// Set-Cookie 헤더에서 refreshToken 값 추출
-  String? _extractRefreshToken(Response<dynamic> response) {
-    final cookies = response.headers['set-cookie'];
-    if (cookies == null) return null;
-    for (final cookie in cookies) {
-      final match = RegExp(r'refreshToken=([^;]+)').firstMatch(cookie);
-      if (match != null) return match.group(1);
-    }
-    return null;
-  }
 
   /// POST /signup-member
   ///
@@ -66,7 +56,33 @@ class AuthRemoteDataSource {
     return AuthResponseModel.fromJson(data);
   }
 
-  /// POST /find-password
+  /// POST /signup-official — 관계자(관리자) 회원가입
+  ///
+  /// [verificationCode] : 관리자 인증 코드
+  Future<AuthResponseModel> signUpOfficial({
+    required String username,
+    required String password,
+    required String email,
+    required String affiliationName,
+    required String verificationCode,
+    String platformType = 'ANDROID',
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ApiConstants.signUpOfficial,
+      queryParameters: {'platformType': platformType},
+      data: {
+        'username': username,
+        'password': password,
+        'email': email,
+        'affiliation_name': affiliationName,
+        'verification_code': verificationCode,
+      },
+    );
+    final data = response.data!['data'] as Map<String, dynamic>;
+    return AuthResponseModel.fromJson(data);
+  }
+
+  /// POST /api/verification/find-password
   ///
   /// 반환값: register_token (이후 비밀번호 재설정에 사용)
   Future<String> findPassword({
@@ -75,10 +91,7 @@ class AuthRemoteDataSource {
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       _kFindPassword,
-      data: {
-        'email': email,
-        'verification_code': verificationCode,
-      },
+      data: {'email': email, 'verification_code': verificationCode},
     );
     final data = response.data!['data'] as Map<String, dynamic>;
     return data['register_token'] as String;
@@ -91,10 +104,7 @@ class AuthRemoteDataSource {
   }) async {
     await _dio.post<Map<String, dynamic>>(
       _kEmailVerify,
-      data: {
-        'email': email,
-        'verification_code': verificationCode,
-      },
+      data: {'email': email, 'verification_code': verificationCode},
     );
   }
 
@@ -125,15 +135,12 @@ class AuthRemoteDataSource {
       _kLogin,
       queryParameters: {'platformType': platformType},
       options: Options(headers: {'X-Device-Token': deviceToken}),
-      data: {
-        'username': username,
-        'password': password,
-      },
+      data: {'username': username, 'password': password},
     );
     final data = response.data!['data'] as Map<String, dynamic>;
     return AuthLoginResult(
       model: AuthResponseModel.fromJson(data),
-      refreshToken: _extractRefreshToken(response),
+      refreshToken: extractSetCookieValue(response, 'refreshToken'),
     );
   }
 
@@ -150,7 +157,8 @@ class AuthRemoteDataSource {
     final data = response.data!['data'] as Map<String, dynamic>;
     return AuthLoginResult(
       model: AuthResponseModel.fromJson(data),
-      refreshToken: _extractRefreshToken(response) ?? refreshToken,
+      refreshToken:
+          extractSetCookieValue(response, 'refreshToken') ?? refreshToken,
     );
   }
 
@@ -175,10 +183,12 @@ class AuthRemoteDataSource {
     await _dio.post<Map<String, dynamic>>(
       _kLogout,
       queryParameters: {'platformType': platformType},
-      options: Options(headers: {
-        'Authorization': 'Bearer $accessToken',
-        'X-Device-Token': deviceToken,
-      }),
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'X-Device-Token': deviceToken,
+        },
+      ),
     );
   }
 
@@ -199,10 +209,7 @@ class AuthRemoteDataSource {
     await _dio.patch<Map<String, dynamic>>(
       _kPasswordReset,
       queryParameters: {'registerToken': registerToken},
-      data: {
-        'email': email,
-        'new_password': newPassword,
-      },
+      data: {'email': email, 'new_password': newPassword},
     );
   }
 

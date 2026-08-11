@@ -6,10 +6,7 @@ class EmailVerifyState {
   final int remainingSeconds;
   final String code;
 
-  const EmailVerifyState({
-    required this.remainingSeconds,
-    required this.code,
-  });
+  const EmailVerifyState({required this.remainingSeconds, required this.code});
 
   factory EmailVerifyState.initial() =>
       const EmailVerifyState(remainingSeconds: 300, code: '');
@@ -64,6 +61,6 @@ class EmailVerifyNotifier extends Notifier<EmailVerifyState> {
 }
 
 final emailVerifyProvider =
-    NotifierProvider<EmailVerifyNotifier, EmailVerifyState>(
-  EmailVerifyNotifier.new,
-);
+    NotifierProvider.autoDispose<EmailVerifyNotifier, EmailVerifyState>(
+      EmailVerifyNotifier.new,
+    );

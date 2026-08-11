@@ -16,14 +16,23 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     required String affiliationName,
     required String verificationCode,
+    bool isAdmin = false,
   }) async {
-    final result = await _remote.signUp(
-      username: username,
-      email: email,
-      password: password,
-      affiliationName: affiliationName,
-      verificationCode: verificationCode,
-    );
+    final result = isAdmin
+        ? await _remote.signUpOfficial(
+            username: username,
+            email: email,
+            password: password,
+            affiliationName: affiliationName,
+            verificationCode: verificationCode,
+          )
+        : await _remote.signUp(
+            username: username,
+            email: email,
+            password: password,
+            affiliationName: affiliationName,
+            verificationCode: verificationCode,
+          );
 
     return User(
       id: result.username,
@@ -34,11 +43,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<User> login({required String username, required String password}) async {
-    final result = await _remote.login(
-      username: username,
-      password: password,
-    );
+  Future<User> login({
+    required String username,
+    required String password,
+  }) async {
+    final result = await _remote.login(username: username, password: password);
     return User(
       id: result.model.username,
       email: '',
@@ -46,6 +55,7 @@ class AuthRepositoryImpl implements AuthRepository {
           ? result.model.nickname
           : result.model.username,
       isAdmin: result.model.isAdmin,
+      affiliationName: result.model.affiliationName,
       accessToken: result.model.accessToken,
       refreshToken: result.refreshToken,
     );
@@ -61,6 +71,7 @@ class AuthRepositoryImpl implements AuthRepository {
           ? result.model.nickname
           : result.model.username,
       isAdmin: result.model.isAdmin,
+      affiliationName: result.model.affiliationName,
       accessToken: result.model.accessToken,
       refreshToken: result.refreshToken,
     );
@@ -77,7 +88,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> verifyEmailCode({required String email, required String code}) async {
+  Future<void> verifyEmailCode({
+    required String email,
+    required String code,
+  }) async {
     await _remote.verifyEmail(email: email, verificationCode: code);
   }
 
@@ -96,7 +110,10 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String verificationCode,
   }) async {
-    return _remote.findPassword(email: email, verificationCode: verificationCode);
+    return _remote.findPassword(
+      email: email,
+      verificationCode: verificationCode,
+    );
   }
 
   @override
@@ -135,4 +152,3 @@ class AuthRepositoryImpl implements AuthRepository {
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AuthRepositoryImpl(ref.watch(authRemoteDataSourceProvider)),
 );
-

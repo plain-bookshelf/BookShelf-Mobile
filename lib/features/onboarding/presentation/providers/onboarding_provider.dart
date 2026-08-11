@@ -1,5 +1,5 @@
+import 'package:bookshelf_mobile/core/network/api_error.dart';
 import 'package:bookshelf_mobile/features/auth/data/datasources/auth_remote_data_source.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// 온보딩 흐름 전체 상태
@@ -71,29 +71,17 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
       if (!_mounted) return false;
       state = state.copyWith(isLoading: false);
       return true;
-    } on DioException catch (e) {
+    } catch (e) {
       if (!_mounted) return false;
       state = state.copyWith(
         isLoading: false,
-        errorMessage: _parseError(e),
-      );
-      return false;
-    } catch (_) {
-      if (!_mounted) return false;
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: '시간 등록에 실패했습니다. 다시 시도해주세요.',
+        errorMessage: parseApiErrorMessage(
+          e,
+          fallback: '시간 등록에 실패했습니다. 다시 시도해주세요.',
+        ),
       );
       return false;
     }
-  }
-
-  String _parseError(DioException e) {
-    final data = e.response?.data;
-    if (data is Map && data['message'] != null) {
-      return data['message'] as String;
-    }
-    return '시간 등록에 실패했습니다. 다시 시도해주세요.';
   }
 
   void reset() => state = const OnboardingState();

@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 
 class EmailInputPage extends ConsumerStatefulWidget {
   final bool isAdmin;
+
   const EmailInputPage({super.key, this.isAdmin = false});
 
   @override
@@ -61,14 +62,19 @@ class _EmailInputPageState extends ConsumerState<EmailInputPage> {
               Text(
                 widget.isAdmin ? '이메일 또는 아이디 생성' : '이메일 받기',
                 style: const TextStyle(
-                    fontSize: 28, fontWeight: FontWeight.w500),
+                  fontSize: 28,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
-              const Text('회원가입하고 책마루에 가입하세요!',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF777777))),
+              const Text(
+                '회원가입하고 책마루에 가입하세요!',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF777777),
+                ),
+              ),
               const SizedBox(height: 32),
               AppTextField(
                 inputFormatters: [],

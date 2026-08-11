@@ -1,68 +1,49 @@
 import 'package:bookshelf_mobile/core/constants/app_colors.dart';
 import 'package:bookshelf_mobile/core/network/api_error.dart';
 import 'package:bookshelf_mobile/core/router/app_router.dart';
+import 'package:bookshelf_mobile/core/router/route_extras.dart';
 import 'package:bookshelf_mobile/core/widgets/app_elevated_button.dart';
 import 'package:bookshelf_mobile/core/widgets/app_text_field.dart';
 import 'package:bookshelf_mobile/core/widgets/error_dialog.dart';
-import 'package:bookshelf_mobile/core/widgets/step_app_bar.dart';
 import 'package:bookshelf_mobile/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:bookshelf_mobile/features/auth/presentation/providers/email_verify_provider.dart';
+import 'package:bookshelf_mobile/features/auth/presentation/providers/find_password_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class EmailVerifyPage extends ConsumerStatefulWidget {
+class FindPasswordVerifyPage extends ConsumerStatefulWidget {
   final String email;
-  final bool isAdmin;
 
-  const EmailVerifyPage({super.key, required this.email, this.isAdmin = false});
+  const FindPasswordVerifyPage({super.key, required this.email});
 
   @override
-  ConsumerState<EmailVerifyPage> createState() => _EmailVerifyPageState();
+  ConsumerState<FindPasswordVerifyPage> createState() =>
+      _FindPasswordVerifyPageState();
 }
 
-class _EmailVerifyPageState extends ConsumerState<EmailVerifyPage> {
-  final _controller = TextEditingController();
-
-  int get _totalSteps => widget.isAdmin ? 4 : 3;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _sendEmail());
-  }
+class _FindPasswordVerifyPageState
+    extends ConsumerState<FindPasswordVerifyPage> {
+  final _codeController = TextEditingController();
 
   @override
   void dispose() {
-    _controller.dispose();
+    _codeController.dispose();
     super.dispose();
-  }
-
-  Future<void> _sendEmail() async {
-    try {
-      await ref
-          .read(authRepositoryProvider)
-          .sendVerificationEmail(widget.email);
-    } catch (e) {
-      if (!mounted) return;
-      await showErrorDialog(
-        context,
-        title: '인증 이메일 발송 실패',
-        message: parseApiErrorMessage(
-          e,
-          fallback: '인증 이메일 발송에 실패했습니다. 재전송을 눌러주세요.',
-        ),
-      );
-    }
   }
 
   Future<void> _onNext(String code) async {
     try {
-      await ref
+      final registerToken = await ref
           .read(authRepositoryProvider)
-          .verifyEmailCode(email: widget.email, code: code);
+          .findPassword(email: widget.email, verificationCode: code);
       if (!mounted) return;
-      context.push(AppRoutes.registerPassword, extra: widget.isAdmin);
+      context.push(
+        AppRoutes.changePassword,
+        extra: ChangePasswordExtra(
+          registerToken: registerToken,
+          email: widget.email,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       await showErrorDialog(
@@ -75,15 +56,22 @@ class _EmailVerifyPageState extends ConsumerState<EmailVerifyPage> {
 
   @override
   Widget build(BuildContext context) {
-    final timerState = ref.watch(emailVerifyProvider);
-    final notifier = ref.read(emailVerifyProvider.notifier);
+    final timerState = ref.watch(findPasswordVerifyProvider);
+    final notifier = ref.read(findPasswordVerifyProvider.notifier);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: StepAppBar(
-        showStep: true,
-        currentStep: 1,
-        totalSteps: _totalSteps,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: GestureDetector(
+          onTap: () => context.pop(),
+          child: const Icon(
+            Icons.arrow_back_ios_new,
+            size: 18,
+            color: Color(0xFF7E7E7E),
+          ),
+        ),
       ),
       body: SafeArea(
         bottom: true,
@@ -94,23 +82,22 @@ class _EmailVerifyPageState extends ConsumerState<EmailVerifyPage> {
             children: [
               const SizedBox(height: 16),
               const Text(
-                '인증코드 입력',
+                '인증번호 확인',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              const Text(
-                '회원가입하고 책마루에 가입하세요!',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.grey600,
+              Text(
+                widget.email,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.successNormal,
                 ),
               ),
               const SizedBox(height: 32),
               AppTextField(
                 hintText: '인증번호 입력',
-                controller: _controller,
-                keyboardType: TextInputType.number,
+                controller: _codeController,
                 onChanged: (v) {
                   notifier.updateCode(v);
                   setState(() {});
@@ -138,10 +125,14 @@ class _EmailVerifyPageState extends ConsumerState<EmailVerifyPage> {
                       style: TextStyle(fontSize: 14, color: AppColors.grey600),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        _controller.clear();
+                      onTap: () async {
+                        _codeController.clear();
                         notifier.resend();
-                        _sendEmail();
+                        try {
+                          await ref
+                              .read(authRepositoryProvider)
+                              .sendFindPasswordEmail(widget.email);
+                        } catch (_) {}
                       },
                       child: const Text(
                         '재전송',

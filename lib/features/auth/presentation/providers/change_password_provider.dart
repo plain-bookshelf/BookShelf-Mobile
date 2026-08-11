@@ -1,5 +1,5 @@
+import 'package:bookshelf_mobile/core/network/api_error.dart';
 import 'package:bookshelf_mobile/features/auth/data/repositories/auth_repository_impl.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ChangePasswordState {
@@ -37,24 +37,16 @@ class ChangePasswordNotifier extends Notifier<ChangePasswordState> {
           );
       state = state.copyWith(isLoading: false);
       return true;
-    } on DioException catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: _parseError(e));
-      return false;
-    } catch (_) {
+    } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: '비밀번호 재설정에 실패했습니다. 다시 시도해주세요.',
+        errorMessage: parseApiErrorMessage(
+          e,
+          fallback: '비밀번호 재설정에 실패했습니다. 다시 시도해주세요.',
+        ),
       );
       return false;
     }
-  }
-
-  String _parseError(DioException e) {
-    final data = e.response?.data;
-    if (data is Map && data['message'] != null) {
-      return data['message'] as String;
-    }
-    return '비밀번호 변경에 실패했습니다. 다시 시도해주세요.';
   }
 }
 

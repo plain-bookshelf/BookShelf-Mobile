@@ -2,6 +2,7 @@ import 'package:bookshelf_mobile/core/constants/app_colors.dart';
 import 'package:bookshelf_mobile/core/router/app_router.dart';
 import 'package:bookshelf_mobile/core/widgets/app_elevated_button.dart';
 import 'package:bookshelf_mobile/core/widgets/app_text_field.dart';
+import 'package:bookshelf_mobile/core/widgets/error_dialog.dart';
 import 'package:bookshelf_mobile/core/widgets/step_app_bar.dart';
 import 'package:bookshelf_mobile/features/auth/presentation/providers/sign_up_provider.dart';
 import 'package:flutter/material.dart';
@@ -35,11 +36,10 @@ class _AuthCodePageState extends ConsumerState<AuthCodePage> {
       context.push(AppRoutes.registerComplete);
     } else {
       final error = ref.read(signUpProvider).errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error ?? '회원가입에 실패했습니다.'),
-          backgroundColor: AppColors.errorNormal,
-        ),
+      await showErrorDialog(
+        context,
+        title: '회원가입 실패',
+        message: error ?? '회원가입에 실패했습니다.',
       );
     }
   }

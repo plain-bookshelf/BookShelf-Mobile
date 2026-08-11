@@ -3,6 +3,7 @@ import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
 import 'package:bookshelf_mobile/core/router/app_router.dart';
 import 'package:bookshelf_mobile/core/widgets/app_elevated_button.dart';
 import 'package:bookshelf_mobile/core/widgets/app_text_field.dart';
+import 'package:bookshelf_mobile/core/widgets/error_dialog.dart';
 import 'package:bookshelf_mobile/features/auth/presentation/providers/change_password_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,11 +85,10 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
       );
     } else {
       final error = ref.read(changePasswordProvider).errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error ?? '비밀번호 재설정에 실패했습니다.'),
-          backgroundColor: AppColors.errorNormal,
-        ),
+      await showErrorDialog(
+        context,
+        title: '비밀번호 재설정 실패',
+        message: error ?? '비밀번호 재설정에 실패했습니다.',
       );
     }
   }

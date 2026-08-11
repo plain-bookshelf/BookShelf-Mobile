@@ -3,6 +3,7 @@ import 'package:bookshelf_mobile/core/constants/app_text_styles.dart';
 import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
 import 'package:bookshelf_mobile/core/router/app_router.dart';
 import 'package:bookshelf_mobile/core/widgets/app_elevated_button.dart';
+import 'package:bookshelf_mobile/core/widgets/error_dialog.dart';
 import 'package:bookshelf_mobile/features/onboarding/presentation/providers/onboarding_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,11 +36,10 @@ class OnboardingReadingTimePage extends ConsumerWidget {
       context.push(AppRoutes.onboardingRecommend);
     } else {
       final error = ref.read(onboardingProvider).errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error ?? '시간 등록에 실패했습니다.'),
-          backgroundColor: AppColors.errorNormal,
-        ),
+      await showErrorDialog(
+        context,
+        title: '시간 등록 실패',
+        message: error ?? '시간 등록에 실패했습니다.',
       );
     }
   }

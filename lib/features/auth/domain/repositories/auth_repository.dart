@@ -18,12 +18,14 @@ abstract interface class AuthRepository {
   Future<void> verifyEmailCode({required String email, required String code});
 
   /// 회원가입
+  /// [isAdmin] : true면 관계자(관리자) 가입(/signup-official), false면 일반 회원가입(/signup-member)
   Future<User> register({
     required String username,
     required String email,
     required String password,
     required String affiliationName,
     required String verificationCode,
+    bool isAdmin = false,
   });
 
   /// 회원 탈퇴
