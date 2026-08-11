@@ -34,12 +34,17 @@ class SseService {
   }) async {
     if (_disposed || controller.isClosed) return;
 
-    final uri = Uri.parse('${ApiConstants.baseUrl}/api/notification/subscribe');
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl1}/api/notification/subscribe',
+    );
 
     try {
       _client = HttpClient();
       final request = await _client!.getUrl(uri);
-      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $accessToken');
+      request.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Bearer $accessToken',
+      );
       request.headers.set(HttpHeaders.acceptHeader, 'text/event-stream');
       request.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
       if (lastEventId != null && lastEventId.isNotEmpty) {
