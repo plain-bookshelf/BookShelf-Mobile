@@ -1,3 +1,4 @@
+import 'package:bookshelf_mobile/core/network/api_error.dart';
 import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
 import 'package:bookshelf_mobile/features/search/data/repositories/search_repository_impl.dart';
 import 'package:bookshelf_mobile/features/search/domain/entities/search_book.dart';
@@ -93,7 +94,7 @@ class SearchNotifier extends Notifier<SearchState> {
     } catch (e) {
       state = state.copyWith(
         status: SearchStatus.failure,
-        errorMessage: e.toString(),
+        errorMessage: parseApiErrorMessage(e, fallback: '검색에 실패했습니다.'),
       );
     }
   }
