@@ -1,12 +1,14 @@
+import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
+import 'package:bookshelf_mobile/features/ai/data/datasources/recommend_remote_data_source.dart';
 import 'package:bookshelf_mobile/features/ai/domain/entities/ai_message.dart';
 import 'package:bookshelf_mobile/features/book/domain/entities/book.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ── 상태 ──────────────────────────────────────────────────────────────────────
 enum AiStatus {
-  idle,         // 대화 없음 (빈 화면)
-  chatting,     // 응답 대기 중 (타이핑 인디케이터)
-  recommended,  // 추천 결과 표시
+  idle, // 대화 없음 (빈 화면)
+  chatting, // 응답 대기 중 (타이핑 인디케이터)
+  recommended, // 추천 결과 표시
 }
 
 class AiState {
@@ -33,49 +35,14 @@ class AiState {
     bool? isTyping,
     String? userName,
     List<Book>? recommendedBooks,
-  }) =>
-      AiState(
-        status: status ?? this.status,
-        messages: messages ?? this.messages,
-        isTyping: isTyping ?? this.isTyping,
-        userName: userName ?? this.userName,
-        recommendedBooks: recommendedBooks ?? this.recommendedBooks,
-      );
+  }) => AiState(
+    status: status ?? this.status,
+    messages: messages ?? this.messages,
+    isTyping: isTyping ?? this.isTyping,
+    userName: userName ?? this.userName,
+    recommendedBooks: recommendedBooks ?? this.recommendedBooks,
+  );
 }
-
-// ── 더미 추천 도서 ─────────────────────────────────────────────────────────────
-const _dummyRecommendations = <Book>[
-  Book(
-    id: 'r1', title: '화씨 451', author: '레이 브래드버리',
-    genre: '소설', publisher: 'SF북스', publishYear: 1953,
-    status: BookStatus.available,
-  ),
-  Book(
-    id: 'r2', title: '1984', author: '조지 오웰',
-    genre: '소설', publisher: '민음사', publishYear: 1949,
-    status: BookStatus.available,
-  ),
-  Book(
-    id: 'r3', title: '멋진 신세계', author: '올더스 헉슬리',
-    genre: '소설', publisher: '문학사상', publishYear: 1932,
-    status: BookStatus.rented,
-  ),
-  Book(
-    id: 'r4', title: '파친코', author: '이민진',
-    genre: '소설', publisher: '문학사상', publishYear: 2022,
-    status: BookStatus.available,
-  ),
-  Book(
-    id: 'r5', title: '채식주의자', author: '한강',
-    genre: '소설', publisher: '창비', publishYear: 2007,
-    status: BookStatus.available,
-  ),
-  Book(
-    id: 'r6', title: '아몬드', author: '손원평',
-    genre: '소설', publisher: '창비', publishYear: 2017,
-    status: BookStatus.available,
-  ),
-];
 
 // ── AiNotifier ────────────────────────────────────────────────────────────────
 class AiNotifier extends Notifier<AiState> {
@@ -108,8 +75,17 @@ class AiNotifier extends Notifier<AiState> {
       isTyping: true,
     );
 
-    // 2. AI 응답 대기 (TODO: 실제 AI API 연동)
-    await Future.delayed(const Duration(milliseconds: 1200));
+    // 2. 추천 API 호출 (GET /recommend_books)
+    final memberId = ref.read(authSessionProvider).username ?? '';
+    List<Book> recommended = const [];
+    try {
+      final books = await ref
+          .read(recommendRemoteDataSourceProvider)
+          .getRecommendedBooks(memberId: memberId);
+      recommended = books.map((b) => b.toEntity()).toList();
+    } catch (_) {
+      // 추천 서버 실패 시 빈 목록으로 대화는 계속 이어감
+    }
     if (!_mounted) return;
 
     // 3. 추천 결과로 전환
@@ -124,7 +100,7 @@ class AiNotifier extends Notifier<AiState> {
         ),
       ],
       isTyping: false,
-      recommendedBooks: _dummyRecommendations,
+      recommendedBooks: recommended,
     );
   }
 
@@ -134,5 +110,4 @@ class AiNotifier extends Notifier<AiState> {
   }
 }
 
-final aiProvider =
-    NotifierProvider<AiNotifier, AiState>(AiNotifier.new);
+final aiProvider = NotifierProvider<AiNotifier, AiState>(AiNotifier.new);
