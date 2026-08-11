@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:bookshelf_mobile/core/network/api_client.dart';
+import 'package:bookshelf_mobile/core/network/cookie_utils.dart';
+import 'package:bookshelf_mobile/features/my_page/data/models/affiliation_change_model.dart';
 import 'package:bookshelf_mobile/features/my_page/data/models/lending_info_model.dart';
 import 'package:bookshelf_mobile/features/my_page/data/models/liked_book_model.dart';
 import 'package:bookshelf_mobile/features/my_page/data/models/my_page_model.dart';
@@ -12,6 +14,9 @@ const _kMyPage = '/myPage';
 const _kLendingInfo = '/myPage/lendingInfo';
 const _kLikeBook = '/myPage/like-book';
 const _kProfileImageUrl = '/api/member/profile-image/url';
+const _kNicknameChange = '/api/member/nickname-change';
+const _kAffiliationChange = '/api/member/affiliation-change';
+const _kValidNickname = '/api/member/valid-nickname';
 
 class MyPageRemoteDataSource {
   final Dio _dio;
@@ -32,9 +37,7 @@ class MyPageRemoteDataSource {
   }
 
   /// GET /myPage/lendinginfo — 대여/예약/연체 책 정보
-  Future<LendingInfoModel> getLendingInfo({
-    required String accessToken,
-  }) async {
+  Future<LendingInfoModel> getLendingInfo({required String accessToken}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       _kLendingInfo,
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
@@ -58,6 +61,58 @@ class MyPageRemoteDataSource {
     return list
         .map((e) => LikedBookModel.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// PATCH /nickname-change — 닉네임 변경
+  Future<void> updateNickname({
+    required String accessToken,
+    required String newNickname,
+  }) async {
+    await _dio.patch<Map<String, dynamic>>(
+      _kNicknameChange,
+      data: {'new_nickname': newNickname},
+      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+    );
+  }
+
+  /// GET /api/member/valid-nickname — 닉네임 중복 확인
+  ///
+  /// 사용 가능하면 정상 응답, 이미 사용중이면 서버가 에러 응답(DioException)을 내려줌
+  Future<void> validNickname({
+    required String accessToken,
+    required String nickname,
+  }) async {
+    await _dio.get<Map<String, dynamic>>(
+      _kValidNickname,
+      queryParameters: {'nickname': nickname},
+      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+    );
+  }
+
+  /// PATCH /api/member/affiliation-change — 소속 변경
+  ///
+  /// 성공 시 서버가 새 access_token(+refresh_token 쿠키)을 함께 내려줌
+  Future<AffiliationChangeModel> updateAffiliation({
+    required String accessToken,
+    required String newAffiliationName,
+  }) async {
+    final platformType = Platform.isAndroid
+        ? 'ANDROID'
+        : Platform.isIOS
+        ? 'IOS'
+        : 'WEB';
+
+    final response = await _dio.patch<Map<String, dynamic>>(
+      _kAffiliationChange,
+      queryParameters: {'platformType': platformType},
+      data: {'new_affiliation_name': newAffiliationName},
+      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+    );
+    final data = response.data!['data'] as Map<String, dynamic>;
+    return AffiliationChangeModel.fromJson(
+      data,
+      refreshToken: extractSetCookieValue(response, 'refreshToken'),
+    );
   }
 
   /// POST /api/member/profile-image/url → S3 PUT 업로드 → public_url 반환
@@ -89,10 +144,7 @@ class MyPageRemoteDataSource {
       result.uploadUrl,
       data: Stream.fromIterable([bytes]),
       options: Options(
-        headers: {
-          'Content-Type': contentType,
-          'Content-Length': fileSize,
-        },
+        headers: {'Content-Type': contentType, 'Content-Length': fileSize},
         followRedirects: false,
         validateStatus: (status) => status != null && status < 300,
       ),

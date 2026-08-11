@@ -17,4 +17,14 @@ class MyPageInfo {
     required this.reservedBookCount,
     required this.overdueBookCount,
   });
+
+  MyPageInfo copyWith({String? profileImage, String? nickname}) => MyPageInfo(
+    profileImage: profileImage ?? this.profileImage,
+    nickname: nickname ?? this.nickname,
+    mostLittleLeftRentalTitle: mostLittleLeftRentalTitle,
+    mostLittleLeftRentalDate: mostLittleLeftRentalDate,
+    rentedBookCount: rentedBookCount,
+    reservedBookCount: reservedBookCount,
+    overdueBookCount: overdueBookCount,
+  );
 }

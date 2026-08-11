@@ -1,4 +1,5 @@
 import 'package:bookshelf_mobile/features/my_page/data/datasources/my_page_remote_data_source.dart';
+import 'package:bookshelf_mobile/features/my_page/domain/entities/affiliation_change_result.dart';
 import 'package:bookshelf_mobile/features/my_page/domain/entities/lending_info.dart';
 import 'package:bookshelf_mobile/features/my_page/domain/entities/liked_book.dart';
 import 'package:bookshelf_mobile/features/my_page/domain/entities/my_page_info.dart';
@@ -35,14 +36,40 @@ class MyPageRepositoryImpl implements MyPageRepository {
     required String fileName,
     required String contentType,
     required int fileSize,
-  }) =>
-      _remote.uploadProfileImage(
-        accessToken: accessToken,
-        filePath: filePath,
-        fileName: fileName,
-        contentType: contentType,
-        fileSize: fileSize,
-      );
+  }) => _remote.uploadProfileImage(
+    accessToken: accessToken,
+    filePath: filePath,
+    fileName: fileName,
+    contentType: contentType,
+    fileSize: fileSize,
+  );
+
+  @override
+  Future<void> updateNickname({
+    required String accessToken,
+    required String newNickname,
+  }) => _remote.updateNickname(
+    accessToken: accessToken,
+    newNickname: newNickname,
+  );
+
+  @override
+  Future<void> validNickname({
+    required String accessToken,
+    required String nickname,
+  }) => _remote.validNickname(accessToken: accessToken, nickname: nickname);
+
+  @override
+  Future<AffiliationChangeResult> updateAffiliation({
+    required String accessToken,
+    required String newAffiliationName,
+  }) async {
+    final model = await _remote.updateAffiliation(
+      accessToken: accessToken,
+      newAffiliationName: newAffiliationName,
+    );
+    return model.toEntity();
+  }
 }
 
 final myPageRepositoryProvider = Provider<MyPageRepository>(
