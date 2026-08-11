@@ -20,14 +20,13 @@ class AppElevatedButton extends StatelessWidget {
         onPressed: onPressed,
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.disabled)) return AppColors.white;
-            if (states.contains(WidgetState.pressed)) return AppColors.successNormalHover;
+            if (states.contains(WidgetState.disabled))
+              return AppColors.successLightActive;
+            if (states.contains(WidgetState.pressed))
+              return AppColors.successNormalHover;
             return AppColors.successNormal;
           }),
-          foregroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.disabled)) return AppColors.successNormal;
-            return AppColors.white;
-          }),
+          foregroundColor: WidgetStateProperty.all(AppColors.white),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),

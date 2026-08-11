@@ -5,5 +5,6 @@
 ///
 /// api_config.dart 는 .gitignore 에 등록되어 git 에 커밋되지 않습니다.
 abstract class ApiConfig {
-  static const baseUrl = 'https://your-server-address';
+  static const baseUrl1 = 'https://your-server-address';
+  static const baseUrl2 = 'https://your-recommend-server-address';
 }

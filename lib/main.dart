@@ -10,6 +10,8 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final savedToken = prefs.getString('access_token');
   final savedRefresh = prefs.getString('refresh_token');
+  final savedUsername = prefs.getString('username');
+  final savedAffiliationName = prefs.getString('affiliation_name');
   final hasToken = savedToken != null && savedToken.isNotEmpty;
 
   runApp(
@@ -17,6 +19,8 @@ void main() async {
       overrides: [
         storedAccessTokenProvider.overrideWithValue(savedToken),
         storedRefreshTokenProvider.overrideWithValue(savedRefresh),
+        storedUsernameProvider.overrideWithValue(savedUsername),
+        storedAffiliationNameProvider.overrideWithValue(savedAffiliationName),
       ],
       child: BookShelfApp(
         initialLocation: hasToken ? AppRoutes.home : AppRoutes.login,
