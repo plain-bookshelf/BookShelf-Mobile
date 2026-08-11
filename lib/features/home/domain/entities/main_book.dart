@@ -15,4 +15,5 @@ class MainBook {
   });
 }
 
+// ignore: constant_identifier_names
 enum BookFindType { POPULAR, RECENT }

@@ -1,5 +1,7 @@
 import 'package:bookshelf_mobile/core/constants/app_colors.dart';
+import 'package:bookshelf_mobile/core/network/api_error.dart';
 import 'package:bookshelf_mobile/core/router/app_router.dart';
+import 'package:bookshelf_mobile/core/widgets/network_book_cover.dart';
 import 'package:bookshelf_mobile/features/home/domain/entities/main_book.dart';
 import 'package:bookshelf_mobile/features/home/presentation/providers/home_provider.dart';
 import 'package:flutter/material.dart';
@@ -60,9 +62,10 @@ class _BannerSection extends StatelessWidget {
         child: Text(
           '이번 주 신규 도서를 만나보세요!',
           style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.successDark),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.successDark,
+          ),
         ),
       ),
     );
@@ -82,18 +85,24 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+          ),
           GestureDetector(
             onTap: onMore,
-            child: const Text('더보기',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.grey600)),
+            child: const Text(
+              '더보기',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: AppColors.grey600,
+              ),
+            ),
           ),
         ],
       ),
@@ -115,8 +124,11 @@ class _HorizontalBookList extends StatelessWidget {
         error: (e, st) {
           debugPrint('홈 책 목록 오류: $e\n$st');
           return Center(
-            child: Text('불러오기 실패: $e',
-                style: const TextStyle(color: AppColors.errorNormal)),
+            child: Text(
+              parseApiErrorMessage(e, fallback: '도서 목록을 불러오지 못했습니다.'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.errorNormal),
+            ),
           );
         },
         data: (books) => books.isEmpty
@@ -125,7 +137,7 @@ class _HorizontalBookList extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 scrollDirection: Axis.horizontal,
                 itemCount: books.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
                 itemBuilder: (context, index) => _BookCard(book: books[index]),
               ),
       ),
@@ -146,27 +158,17 @@ class _BookCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: book.bookImage.isNotEmpty
-                  ? Image.network(
-                      book.bookImage,
-                      width: 110,
-                      height: 140,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _BookImagePlaceholder(),
-                    )
-                  : _BookImagePlaceholder(),
-            ),
+            NetworkBookCover(imageUrl: book.bookImage, width: 110, height: 140),
             const SizedBox(height: 6),
             Text(
               book.title ?? '제목 없음',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textDark),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textDark,
+              ),
             ),
             if (book.author != null)
               Text(
@@ -174,28 +176,14 @@ class _BookCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.grey600),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.grey600,
+                ),
               ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _BookImagePlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 110,
-      height: 140,
-      decoration: BoxDecoration(
-        color: AppColors.grey300,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: const Icon(Icons.book, color: AppColors.grey600, size: 36),
     );
   }
 }
