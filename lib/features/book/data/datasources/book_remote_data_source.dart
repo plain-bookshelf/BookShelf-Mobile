@@ -99,14 +99,17 @@ class BookRemoteDataSource {
   }
 
   /// POST /api/{bookAffiliationId}/reservation — 책 예약
+  /// DELETE /api/{bookAffiliationId}/reservation-delete — 책 예약 취소
   Future<void> requestReservation({
     required String bookId,
     required String accessToken,
+    // required bool isReservation,
   }) async {
     await _dio.post<void>(
       '/api/$bookId/reservation',
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
+    // if(isReservation)
   }
 }
 

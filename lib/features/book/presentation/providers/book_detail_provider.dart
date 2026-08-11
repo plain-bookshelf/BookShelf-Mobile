@@ -1,6 +1,6 @@
+import 'package:bookshelf_mobile/core/network/api_error.dart';
 import 'package:bookshelf_mobile/core/network/auth_session_provider.dart';
 import 'package:bookshelf_mobile/features/book/data/datasources/book_remote_data_source.dart';
-import 'package:dio/dio.dart';
 import 'package:bookshelf_mobile/features/book/data/models/book_detail_model.dart';
 import 'package:bookshelf_mobile/features/book/domain/entities/book.dart';
 import 'package:bookshelf_mobile/features/book/domain/entities/review.dart';
@@ -18,7 +18,12 @@ class BookDetailState {
   final List<Book> recommendations;
   final bool isWishlisted;
   final bool isDescriptionExpanded;
+
+  /// 성공 안내용 토스트(스낵바)
   final String? toastMessage;
+
+  /// 실패 안내용 메시지(에러 모달)
+  final String? errorMessage;
 
   const BookDetailState({
     this.status = BookDetailStatus.loading,
@@ -29,12 +34,13 @@ class BookDetailState {
     this.isWishlisted = false,
     this.isDescriptionExpanded = false,
     this.toastMessage,
+    this.errorMessage,
   });
 
   bool get isLoaded => status == BookDetailStatus.loaded;
   bool get isAvailable => book?.status == BookStatus.available;
 
-  // toastMessage를 명시적으로 null 로 설정하기 위해 sentinel 사용
+  // toastMessage/errorMessage를 명시적으로 null 로 설정하기 위해 sentinel 사용
   static const _omit = Object();
 
   BookDetailState copyWith({
@@ -46,6 +52,7 @@ class BookDetailState {
     bool? isWishlisted,
     bool? isDescriptionExpanded,
     Object? toastMessage = _omit,
+    Object? errorMessage = _omit,
   }) =>
       BookDetailState(
         status: status ?? this.status,
@@ -59,6 +66,9 @@ class BookDetailState {
         toastMessage: identical(toastMessage, _omit)
             ? this.toastMessage
             : toastMessage as String?,
+        errorMessage: identical(errorMessage, _omit)
+            ? this.errorMessage
+            : errorMessage as String?,
       );
 }
 
@@ -240,26 +250,15 @@ class BookDetailNotifier extends Notifier<BookDetailState> {
       await _loadDetail(bookId);
       if (!_mounted) return;
       state = state.copyWith(toastMessage: '책 대여에 성공했어요!');
-    } on DioException catch (e) {
+    } catch (e) {
       if (!_mounted) return;
       state = state.copyWith(
-        toastMessage: _serverMessage(e) ?? '대여에 실패했어요. 잠시 후 다시 시도해주세요.',
-      );
-    } catch (_) {
-      if (!_mounted) return;
-      state = state.copyWith(
-        toastMessage: '대여에 실패했어요. 잠시 후 다시 시도해주세요.',
+        errorMessage: parseApiErrorMessage(
+          e,
+          fallback: '대여에 실패했어요. 잠시 후 다시 시도해주세요.',
+        ),
       );
     }
-  }
-
-  /// 서버 에러 응답({code, message, status, path})에서 message 추출
-  String? _serverMessage(DioException e) {
-    final data = e.response?.data;
-    if (data is Map && data['message'] is String) {
-      return data['message'] as String;
-    }
-    return null;
   }
 
   // ── 예약 요청 ─────────────────────────────────────────────────────────────
@@ -274,15 +273,13 @@ class BookDetailNotifier extends Notifier<BookDetailState> {
       await _loadDetail(bookId);
       if (!_mounted) return;
       state = state.copyWith(toastMessage: '책 예약에 성공했어요!');
-    } on DioException catch (e) {
+    } catch (e) {
       if (!_mounted) return;
       state = state.copyWith(
-        toastMessage: _serverMessage(e) ?? '예약에 실패했어요. 잠시 후 다시 시도해주세요.',
-      );
-    } catch (_) {
-      if (!_mounted) return;
-      state = state.copyWith(
-        toastMessage: '예약에 실패했어요. 잠시 후 다시 시도해주세요.',
+        errorMessage: parseApiErrorMessage(
+          e,
+          fallback: '예약에 실패했어요. 잠시 후 다시 시도해주세요.',
+        ),
       );
     }
   }
@@ -318,19 +315,18 @@ class BookDetailNotifier extends Notifier<BookDetailState> {
 
       if (!_mounted) return;
       state = state.copyWith(toastMessage: '댓글이 등록되었습니다.');
-    } on DioException catch (e) {
+    } catch (e) {
       if (!_mounted) return;
       state = state.copyWith(
-        toastMessage: _serverMessage(e) ?? '댓글 등록에 실패했어요.',
+        errorMessage: parseApiErrorMessage(e, fallback: '댓글 등록에 실패했어요.'),
       );
-    } catch (_) {
-      if (!_mounted) return;
-      state = state.copyWith(toastMessage: '댓글 등록에 실패했어요.');
     }
   }
 
-  // ── 토스트 초기화 ──────────────────────────────────────────────────────────
+  // ── 토스트/에러 초기화 ─────────────────────────────────────────────────────
   void clearToast() => state = state.copyWith(toastMessage: null);
+
+  void clearError() => state = state.copyWith(errorMessage: null);
 }
 
 // Riverpod 3 family: create 함수가 ArgT를 받아 Notifier 인스턴스를 직접 생성
